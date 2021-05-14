@@ -6,10 +6,18 @@ public class Enemy : MonoBehaviour
     private Rigidbody enemyRb;
     private GameObject player;
 
+    public AudioClip nameClip;
+
+    public string displayName;
+    private PlayerSoundEffect soundEffects;
+
+
     void Start()
     {
         enemyRb = GetComponent<Rigidbody>();
         player = GameObject.Find("Player");
+
+        soundEffects = GetComponent<PlayerSoundEffect>();
     }
 
     void Update()
@@ -27,5 +35,16 @@ public class Enemy : MonoBehaviour
         /// challenge: set lookDirection to "enemy to player" vector
         Vector3 lookDirection = player.transform.position - transform.position;
         enemyRb.AddForce(lookDirection.normalized * speed);
+    }
+
+    void OnCollisionEnter()
+    {
+        // GameObject other = collision.gameObject;
+        // if (other.CompareTag("Player"))
+        // {
+
+        //     soundEffects.PlayEnemyHitClip()nameClip, other);
+        // }
+
     }
 }

@@ -110,6 +110,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 8
+  nameClip: {fileID: 8300000, guid: 31ba98258de3174468c8702f416389e1, type: 3}
 --- !u!54 &8643019557595335216
 Rigidbody:
   m_ObjectHideFlags: 0
