@@ -24,98 +24,140 @@ public class PlayerController : MonoBehaviour
         playerRb = GetComponent<Rigidbody>();
         //ActivatePlayer();
         speech = new SpeechIn(onSpeechRecognized);
-        speech.StartListening(new string[]{"help", "resume"});
+        speech.StartListening(new string[] { "help", "resume" });
     }
 
-    async void onSpeechRecognized(string command) {
-        if (command == "resume" && movementFrozen) {
+    async void onSpeechRecognized(string command)
+    {
+        if (command == "resume" && movementFrozen)
+        {
             ResumeAfterPause();
-        } else if (command == "help" && !movementFrozen) {
+        }
+        else if (command == "help" && !movementFrozen)
+        {
             ToggleMovementFrozen();
             var powerups = GameObject.FindGameObjectsWithTag("Powerup");
-            if (powerups.Length > 0) {
+            if (powerups.Length > 0)
+            {
                 await GameObject.Find("Panto").GetComponent<LowerHandle>().SwitchTo(powerups[0]);
             }
         }
     }
 
-    void ToggleMovementFrozen() {
+    void ToggleMovementFrozen()
+    {
         playerRb.constraints = movementFrozen ? RigidbodyConstraints.None : RigidbodyConstraints.FreezeAll;
         foreach (var enemy in GameObject.FindGameObjectsWithTag("Enemy"))
+    }
+    void onRecognized(string message)
+    {
+        Debug.Log("[" + this.GetType() + "]: " + message);
+    }
+
+    public void onApplicationQuit()
+    {
+        speechIn.StopListening();
+    }
+    void Update()
+    {
+        powerupIndicator.transform.position = transform.position + new Vector3(0f, -0.5f, 0f);
+        if (transform.position.y < -10f && !playerFellDown)
+        {
+            playerFellDown = true;
+            float clipTime = soundEffects.PlayerFellDown();
+            speechIn.StopListening();
+            Destroy(gameObject, clipTime);
+        }
+
+        // TODO: before destroying the game object, kill the speech in component
+        if (Input.GetButtonDown("Jump"))
+        {
+            ExplosionPowerup();
+        }
+    }
+    public void OnApplicationQuit()
+    {
+        speechIn.StopListening();
+    }
+    async void PowerUpListener()
+    {
+        string powerup = await speechIn.Listen(new string[] { "boom", "jump", "hide" });
+        switch (powerup)
         {
             enemy.GetComponent<Rigidbody>().constraints = movementFrozen
                                            ? RigidbodyConstraints.None
                                            : RigidbodyConstraints.FreezeAll;
-        }
-        movementFrozen = !movementFrozen;
+    }
+    movementFrozen = !movementFrozen;
     }
 
-    async void ResumeAfterPause() {
-        GameObject enemy = GameObject.FindGameObjectWithTag("Enemy");
-        if (enemy != null)
-        {
-            await GameObject.Find("Panto").GetComponent<LowerHandle>().SwitchTo(enemy);
-        }
-        ToggleMovementFrozen();
-    }
-
-    public async Task ActivatePlayer()
+async void ResumeAfterPause()
+{
+    GameObject enemy = GameObject.FindGameObjectWithTag("Enemy");
+    if (enemy != null)
     {
-        UpperHandle upperHandle = GameObject.Find("Panto").GetComponent<UpperHandle>();
-        await upperHandle.SwitchTo(gameObject);
-        upperHandle.FreeRotation(); 
+        await GameObject.Find("Panto").GetComponent<LowerHandle>().SwitchTo(enemy);
     }
+    ToggleMovementFrozen();
+}
 
-    void Update()
-    {
-        if(!GameObject.FindObjectOfType<SpawnManager>().gameStarted) return;
-        powerupIndicator.transform.position = transform.position + new Vector3(0f, -0.5f, 0f);
-    }
+public async Task ActivatePlayer()
+{
+    UpperHandle upperHandle = GameObject.Find("Panto").GetComponent<UpperHandle>();
+    await upperHandle.SwitchTo(gameObject);
+    upperHandle.FreeRotation();
+}
 
-    void FixedUpdate()
-    {
-        if(!GameObject.FindObjectOfType<SpawnManager>().gameStarted) return;
-        //float forwardInput = Input.GetAxis("Vertical");
-        //playerRb.AddForce(focalPoint.transform.forward * forwardInput * speed);
-        PantoMovement();
-    }
+void Update()
+{
+    if (!GameObject.FindObjectOfType<SpawnManager>().gameStarted) return;
+    powerupIndicator.transform.position = transform.position + new Vector3(0f, -0.5f, 0f);
+}
 
-    void PantoMovement()
-    {
-        UpperHandle upperHandle =  GameObject.Find("Panto").GetComponent<UpperHandle>();
-        float rotation = upperHandle.GetRotation();
-        transform.eulerAngles = new Vector3(0, rotation, 0);
-        playerRb.velocity = speed * transform.forward;
-    }
+void FixedUpdate()
+{
+    if (!GameObject.FindObjectOfType<SpawnManager>().gameStarted) return;
+    //float forwardInput = Input.GetAxis("Vertical");
+    //playerRb.AddForce(focalPoint.transform.forward * forwardInput * speed);
+    PantoMovement();
+}
 
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Powerup"))
-        {
-            hasPowerup = true;
-            powerupIndicator.gameObject.SetActive(true);
-            Destroy(other.gameObject);
-            CancelInvoke("PowerupCountdown"); // if we previously picked up an powerup
-            Invoke("PowerupCountdown", powerupTime);
-        }
-    }
+void PantoMovement()
+{
+    UpperHandle upperHandle = GameObject.Find("Panto").GetComponent<UpperHandle>();
+    float rotation = upperHandle.GetRotation();
+    transform.eulerAngles = new Vector3(0, rotation, 0);
+    playerRb.velocity = speed * transform.forward;
+}
 
-    void OnCollisionEnter(Collision collision)
+void OnTriggerEnter(Collider other)
+{
+    if (other.CompareTag("Powerup"))
     {
-        GameObject other = collision.gameObject;
-        /// challenge: when collision has tag "Enemy" and we have a powerup
-        /// get the enemyRigidbody and push the enemy away from the player
-        if (other.CompareTag("Enemy") && hasPowerup)
-        {
-            Rigidbody enemyRigidbody = other.GetComponent<Rigidbody>();
-            Vector3 awayFromPlayer = other.transform.position - transform.position;
-            enemyRigidbody.AddForce(awayFromPlayer.normalized * powerupStrength, ForceMode.Impulse);
-        }
+        hasPowerup = true;
+        powerupIndicator.gameObject.SetActive(true);
+        Destroy(other.gameObject);
+        CancelInvoke("PowerupCountdown"); // if we previously picked up an powerup
+        Invoke("PowerupCountdown", powerupTime);
     }
+}
 
-    void PowerupCountdown()
+void OnCollisionEnter(Collision collision)
+{
+    GameObject other = collision.gameObject;
+    /// challenge: when collision has tag "Enemy" and we have a powerup
+    /// get the enemyRigidbody and push the enemy away from the player
+    if (other.CompareTag("Enemy") && hasPowerup)
     {
-        hasPowerup = false;
-        powerupIndicator.gameObject.SetActive(false);
+        Rigidbody enemyRigidbody = other.GetComponent<Rigidbody>();
+        Vector3 awayFromPlayer = other.transform.position - transform.position;
+        enemyRigidbody.AddForce(awayFromPlayer.normalized * powerupStrength, ForceMode.Impulse);
     }
+}
+
+void PowerupCountdown()
+{
+    hasPowerup = false;
+    powerupIndicator.gameObject.SetActive(false);
+}
 }
